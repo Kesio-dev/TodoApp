@@ -1,6 +1,16 @@
 import { useLocation, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import {
+  Button,
+  useDisclosure,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input
+} from '@nextui-org/react'
 
 function Project() {
   const { id } = useParams()
@@ -11,11 +21,12 @@ function Project() {
     _id: ''
   })
   const [counter, setCounter] = useState(0)
-  const [open, setOpen] = useState(false)
-
+  const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure()
+  const [modalType, setModalType] = useState('new')
+  const [modalPlacement, setModalPlacement] = useState('auto')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-
+  const [taskId, setTaskId] = useState('')
   const getData = () => {
     window.electron.ipcRenderer.send('one-project', { _id: id })
 
@@ -47,6 +58,7 @@ function Project() {
     setTitle('')
     setDescription('')
     setCounter((prev) => prev + 1)
+    onClose()
   }
 
   const completeTask = (taskId) => {
@@ -65,6 +77,31 @@ function Project() {
       projectId: project._id
     })
     setCounter((prev) => prev + 1)
+    onClose()
+  }
+
+  const updateTask = () => {
+    window.electron.ipcRenderer.send("update-task-in-project", {
+      projectId: id,
+      taskId,
+      updatedTask: {
+        title: title,
+        description: description,
+      }
+    });
+
+    window.electron.ipcRenderer.on("update-task-in-project-response", (event, res) => {
+      if (res.success) {
+        console.log("Задание в проекте успешно обновлено");
+        // Добавьте здесь код для обновления интерфейса, если это необходимо
+      } else {
+        console.error("Ошибка при обновлении задания в проекте:", res.error);
+        // Обработка ошибки, если необходимо
+      }
+    });
+
+    setCounter((prev) => prev + 1)
+    onClose()
   }
 
   return (
@@ -74,12 +111,17 @@ function Project() {
       <div className={'mt-4'}>
         <div className={'text-xl font-semibold'}>Tasks:</div>
 
-        <div onClick={() => setOpen(true)} className={'border rounded p-3 mt-2 cursor-pointer'}>
+        <div
+          onClick={() => {
+            onOpen()
+            setModalType('new')
+          }}
+          className={'border rounded p-3 mt-2 cursor-pointer'}
+        >
           <div className={'flex items-center gap-4'}>
             <div className={'cursor-pointer'}>
               <img className={'w-auto h-6'} src={'/plus.svg'} alt={''} />
             </div>
-
             <div className={'font-semibold'}>НОВОЕ ЗАДАНИЕ</div>
           </div>
         </div>
@@ -87,19 +129,42 @@ function Project() {
         {project.tasks.map((i, index) => {
           if (!i.done) {
             return (
-              <div className={'border rounded p-3 mt-2'}>
-                <div className={'flex items-center gap-4'}>
-                  <div onClick={() => completeTask(i._id)} className={'cursor-pointer'}>
-                    <img
-                      src={'/cross.svg'}
-                      alt={''}
-                      className={'min-w-[25px] min-h-[25px] w-auto h-6'}
-                    />
-                  </div>
+              <div className={"border rounded p-3 mt-2"}>
+                <div className={"flex items-center gap-4 justify-between"}>
+                  <div className={"flex items-center gap-4"}>
+                    <div onClick={() => completeTask(i._id)} className={"cursor-pointer"}>
+                      <img
+                        src={"/cross.svg"}
+                        alt={""}
+                        className={"min-w-[25px] min-h-[25px] w-auto h-6"}
+                      />
+                    </div>
 
-                  <div>
-                    <div className={'font-semibold'}>{i.title}</div>
-                    <div className={'max-h-20 overflow-y-scroll'}>{i.description}</div>
+                    <div className={"w-auto"}>
+                      <div className={"font-semibold"}>{i.title}</div>
+                      <div className={"max-h-20 overflow-y-scroll"}>{i.description}</div>
+                    </div>
+                  </div>
+                  <div className={"flex gap-2 cursor-pointer"}>
+                    <div
+                      onClick={() => {
+                        onOpen();
+                        setModalType("edit");
+                        setTitle(i.title);
+                        setDescription(i.description);
+                        setTaskId(i._id);
+                      }}
+                      className={"cursor-pointer"}
+                    >
+                      <Pencil />
+                    </div>
+                    <div onClick={() => {
+                      onOpen();
+                      setModalType("delete");
+                      setTaskId(i._id);
+                    }}>
+                      <Trash2 />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -109,32 +174,43 @@ function Project() {
       </div>
 
       <div>
-        <div className={'text-xl font-semibold mt-6'}>Competed Tasks:</div>
+        <div className={"text-xl font-semibold mt-6"}>Competed Tasks:</div>
         {project.tasks.map((i, index) => {
           if (i.done) {
             return (
-              <div className={'border rounded p-3 mt-2 opacity-40'}>
-                <div className={'flex items-center gap-4'}>
-                  <div onClick={() => uncompleteTask(i._id)} className={'cursor-pointer'}>
-                    <img src={'/success.svg'} alt={''} className="min-w-[25px] min-h-[25px]" />
-                  </div>
+              <div className={"border rounded p-3 mt-2 opacity-40"}>
+                <div className={"flex items-center gap-4 justify-between"}>
+                  <div className={"flex items-center gap-4"}>
+                    <div onClick={() => uncompleteTask(i._id)} className={"cursor-pointer"}>
+                      <img
+                        src={"/success.svg"}
+                        alt={""}
+                        className={"min-w-[25px] min-h-[25px] w-auto h-6"}
+                      />
+                    </div>
 
-                  <div className={'w-auto'}>
-                    <div className={'font-semibold'}>{i.title}</div>
-                    <div className={'max-h-20 overflow-y-scroll'}>{i.description}</div>
+                    <div className={"w-auto"}>
+                      <div className={"font-semibold"}>{i.title}</div>
+                      <div className={"max-h-20 overflow-y-scroll"}>{i.description}</div>
+                    </div>
                   </div>
-                  <div className={'flex gap-2 cursor-pointer'}>
+                  <div className={"flex gap-2 cursor-pointer"}>
                     <div
                       onClick={() => {
-                        setOpen(true)
-                        setTitle(i.title)
-                        setDescription(i.description)
+                        onOpen();
+                        setModalType("edit");
+                        setTitle(i.title);
+                        setDescription(i.description);
                       }}
-                      className={'cursor-pointer'}
+                      className={"cursor-pointer"}
                     >
                       <Pencil />
                     </div>
-                    <div onClick={() => deleteTask(i._id)}>
+                    <div onClick={() => {
+                      onOpen()
+                      setModalType("delete")
+                      setTaskId(i._id)
+                    }}>
                       <Trash2 />
                     </div>
                   </div>
@@ -146,98 +222,218 @@ function Project() {
         {project.tasks.filter((x) => x.done).length === 0 && <div>тут пока пусто :(</div>}
       </div>
 
-      <div
-        className={`fixed inset-0 z-10 overflow-y-auto ${!open && 'hidden'}`}
-        aria-labelledby="modal-title"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
-            &#8203;
-          </span>
+      <Modal isOpen={isOpen} placement={modalPlacement} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => {
+            if (modalType === 'new') {
+              return (
+                <>
+                  <ModalHeader className="flex flex-col gap-1">Редактирование проекта</ModalHeader>
+                  <ModalBody>
+                    <div className={'mb-3 text-left'}>
+                      <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">
+                        Название
+                      </label>
 
-          <div className="relative inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg border rtl:text-right dark:bg-gray-900 sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6">
-            <div>
-              <div className="flex items-center justify-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-8 h-8 text-gray-700 dark:text-gray-300"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                  />
-                </svg>
-              </div>
+                      <input
+                        type="text"
+                        placeholder="Название задания"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="block  mt-2 w-full placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"
+                      />
+                    </div>
 
-              <div className="mt-2 text-center">
-                <h3
-                  className="text-lg font-medium leading-6 text-gray-800 capitalize dark:text-white"
-                  id="modal-title"
-                >
-                  Создание нового задания
-                </h3>
-                <div className={'mb-3 text-left'}>
-                  <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">
-                    Название
-                  </label>
+                    <div className={'mb-3 text-left'}>
+                      <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">
+                        Описание
+                      </label>
 
-                  <input
-                    type="text"
-                    placeholder="Название задания"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="block  mt-2 w-full placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"
-                  />
-                </div>
+                      <textarea
+                        placeholder="Описание задания"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="block  mt-2 w-full  placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-4 h-32 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"
+                      ></textarea>
+                    </div>
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button color="danger" variant="light" onPress={onClose}>
+                      Закрыть
+                    </Button>
+                    <Button
+                      color="primary"
+                      onPress={() => {
+                        createTask()
+                      }}
+                    >
+                      Обновить
+                    </Button>
+                  </ModalFooter>
+                  ;
+                </>
+              )
+            }
+            if (modalType === 'delete') {
+              return (
+                <>
+                  <ModalHeader className="flex flex-col gap-1">Удаление задания</ModalHeader>
+                  <ModalBody>
+                    <p>Вы уверены, что хотите удалить задание?</p>
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button color="danger" variant="light" onPress={onClose}>
+                      Отмена
+                    </Button>
+                    <Button color="primary" onPress={() => deleteTask(taskId)}>
+                      Да, согласен
+                    </Button>
+                  </ModalFooter>
+                </>
+              )
+            }
 
-                <div className={'mb-3 text-left'}>
-                  <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">
-                    Описание
-                  </label>
+            if (modalType === 'edit') {
+              return (
+                <>
+                  <ModalHeader className="flex flex-col gap-1">Редактирование проекта</ModalHeader>
+                  <ModalBody>
+                    <div className={"mb-3 text-left"}>
+                      <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">
+                        Название
+                      </label>
 
-                  <textarea
-                    placeholder="Описание задания"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="block  mt-2 w-full  placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-4 h-32 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"
-                  ></textarea>
-                </div>
-              </div>
-            </div>
+                      <input
+                        type="text"
+                        placeholder="Название задания"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="block  mt-2 w-full placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"
+                      />
+                    </div>
 
-            <div className="mt-5 flex justify-end">
-              <div className="sm:flex sm:items-center ">
-                <button
-                  onClick={() => setOpen(false)}
-                  className="w-full px-4 py-2 mt-2 text-sm font-medium tracking-wide text-gray-700
-            capitalize transition-colors duration-300 transform border border-gray-200 rounded-md sm:mt-0 sm:w-auto
-            sm:mx-2 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800 hover:bg-gray-100 focus:outline-none
-            focus:ring focus:ring-gray-300 focus:ring-opacity-40"
-                >
-                  Отмена
-                </button>
+                    <div className={"mb-3 text-left"}>
+                      <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">
+                        Описание
+                      </label>
 
-                <button
-                  onClick={() => {
-                    createTask()
-                    setOpen(false)
-                  }}
-                  className="w-full px-4 py-2 mt-2 text-sm font-medium tracking-wide text-white capitalize transition-colors duration-300 transform bg-blue-600 rounded-md sm:w-auto sm:mt-0 hover:bg-blue-500 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40"
-                >
-                  Создать
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                      <textarea
+                        placeholder="Описание задания"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="block  mt-2 w-full  placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-4 h-32 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"
+                      ></textarea>
+                    </div>
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button color="danger" variant="light" onPress={onClose}>
+                      Отмена
+                    </Button>
+                    <Button color="primary" onPress={updateTask}>
+                      Обновить
+                    </Button>
+                  </ModalFooter>
+                </>
+              )
+            }
+
+
+          }}
+        </ModalContent>
+      </Modal>
+
+      {/*<div*/}
+      {/*  className={`fixed inset-0 z-10 overflow-y-auto ${!open && 'hidden'}`}*/}
+      {/*  aria-labelledby="modal-title"*/}
+      {/*  role="dialog"*/}
+      {/*  aria-modal="true"*/}
+      {/*>*/}
+      {/*  <div className="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">*/}
+      {/*    <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">*/}
+      {/*      &#8203;*/}
+      {/*    </span>*/}
+
+      {/*    <div className="relative inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg border rtl:text-right dark:bg-gray-900 sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6">*/}
+      {/*      <div>*/}
+      {/*        <div className="flex items-center justify-center">*/}
+      {/*          <svg*/}
+      {/*            xmlns="http://www.w3.org/2000/svg"*/}
+      {/*            className="w-8 h-8 text-gray-700 dark:text-gray-300"*/}
+      {/*            fill="none"*/}
+      {/*            viewBox="0 0 24 24"*/}
+      {/*            stroke="currentColor"*/}
+      {/*            stroke-width="2"*/}
+      {/*          >*/}
+      {/*            <path*/}
+      {/*              stroke-linecap="round"*/}
+      {/*              stroke-linejoin="round"*/}
+      {/*              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"*/}
+      {/*            />*/}
+      {/*          </svg>*/}
+      {/*        </div>*/}
+
+      {/*        <div className="mt-2 text-center">*/}
+      {/*          <h3*/}
+      {/*            className="text-lg font-medium leading-6 text-gray-800 capitalize dark:text-white"*/}
+      {/*            id="modal-title"*/}
+      {/*          >*/}
+      {/*            Создание нового задания*/}
+      {/*          </h3>*/}
+      {/*          <div className={'mb-3 text-left'}>*/}
+      {/*            <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">*/}
+      {/*              Название*/}
+      {/*            </label>*/}
+
+      {/*            <input*/}
+      {/*              type="text"*/}
+      {/*              placeholder="Название задания"*/}
+      {/*              value={title}*/}
+      {/*              onChange={(e) => setTitle(e.target.value)}*/}
+      {/*              className="block  mt-2 w-full placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"*/}
+      {/*            />*/}
+      {/*          </div>*/}
+
+      {/*          <div className={'mb-3 text-left'}>*/}
+      {/*            <label htmlFor="username" className="block text-gray-500 dark:text-gray-300">*/}
+      {/*              Описание*/}
+      {/*            </label>*/}
+
+      {/*            <textarea*/}
+      {/*              placeholder="Описание задания"*/}
+      {/*              value={description}*/}
+      {/*              onChange={(e) => setDescription(e.target.value)}*/}
+      {/*              className="block  mt-2 w-full  placeholder-gray-400/70 dark:placeholder-gray-500 rounded-lg border border-gray-200 bg-white px-4 h-32 py-2.5 text-gray-700 focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-300"*/}
+      {/*            ></textarea>*/}
+      {/*          </div>*/}
+      {/*        </div>*/}
+      {/*      </div>*/}
+
+      {/*      <div className="mt-5 flex justify-end">*/}
+      {/*        <div className="sm:flex sm:items-center ">*/}
+      {/*          <button*/}
+      {/*            onClick={() => setOpen(false)}*/}
+      {/*            className="w-full px-4 py-2 mt-2 text-sm font-medium tracking-wide text-gray-700*/}
+      {/*      capitalize transition-colors duration-300 transform border border-gray-200 rounded-md sm:mt-0 sm:w-auto*/}
+      {/*      sm:mx-2 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800 hover:bg-gray-100 focus:outline-none*/}
+      {/*      focus:ring focus:ring-gray-300 focus:ring-opacity-40"*/}
+      {/*          >*/}
+      {/*            Отмена*/}
+      {/*          </button>*/}
+
+      {/*          <button*/}
+      {/*            onClick={() => {*/}
+      {/*              createTask()*/}
+      {/*              setOpen(false)*/}
+      {/*            }}*/}
+      {/*            className="w-full px-4 py-2 mt-2 text-sm font-medium tracking-wide text-white capitalize transition-colors duration-300 transform bg-blue-600 rounded-md sm:w-auto sm:mt-0 hover:bg-blue-500 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40"*/}
+      {/*          >*/}
+      {/*            Создать*/}
+      {/*          </button>*/}
+      {/*        </div>*/}
+      {/*      </div>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</div>*/}
     </div>
   )
 }

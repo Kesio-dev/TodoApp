@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { CirclePause, CirclePlay, RotateCcw } from "lucide-react";
 
 function PomodoroTimer() {
   // Настройки таймера (в минутах)
@@ -57,12 +58,12 @@ function PomodoroTimer() {
   }
 
   return (
-    <div>
-      <h2>Pomodoro Timer</h2>
+    <div className={"text-white bg-red-500 p-3"}>
+      <h2 className={"font-semibold"}>Pomodoro Timer</h2>
       <p>{formatTime()}</p>
-      <button onClick={startTimer}>Start</button>
-      <button onClick={stopTimer}>Stop</button>
-      <button onClick={resetTimer}>Reset</button>
+      <button onClick={startTimer}><CirclePlay /></button>
+      <button onClick={stopTimer}><CirclePause /></button>
+      <button onClick={resetTimer}><RotateCcw /></button>
       {onBreak && <p>Break Time!</p>}
     </div>
   )

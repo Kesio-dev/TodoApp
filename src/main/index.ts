@@ -72,6 +72,95 @@ app.whenReady().then(() => {
     })
   })
 
+  ipcMain.on('delete-project', (event, projectId) => {
+    db.remove({ _id: projectId }, {}, (err, numRemoved) => {
+      if (err) {
+        console.error('Ошибка при удалении проекта:', err)
+        event.reply('delete-project-response', { success: false, error: err })
+      } else {
+        console.log('Проект успешно удален:', numRemoved)
+        event.reply('delete-project-response', { success: true })
+      }
+    })
+  })
+
+  ipcMain.on('update-task-in-project', (event, args) => {
+    const { projectId, taskId, updatedTask } = args;
+
+    db.findOne({ "_id": projectId }, (err, doc) => {
+      if (err) {
+        console.error('Ошибка при поиске проекта:', err);
+        event.reply('update-task-in-project-response', { success: false, error: err });
+        return;
+      }
+
+      if (!doc) {
+        console.error('Проект не найден');
+        event.reply('update-task-in-project-response', { success: false, error: 'Проект не найден' });
+        return;
+      }
+
+      // Находим задание по его ID
+      const taskToUpdate = doc.tasks.find(t => t._id === taskId);
+      if (!taskToUpdate) {
+        console.error('Задание не найдено');
+        event.reply('update-task-in-project-response', { success: false, error: 'Задание не найдено' });
+        return;
+      }
+
+      // Обновляем поля задания
+      Object.assign(taskToUpdate, updatedTask);
+
+      // Обновляем документ в базе данных
+      db.update({ "_id": projectId }, doc, {}, (err, numUpdated) => {
+        if (err) {
+          console.error('Ошибка при обновлении проекта:', err);
+          event.reply('update-task-in-project-response', { success: false, error: err });
+        } else {
+          console.log('Задание в проекте успешно обновлено:', numUpdated);
+          event.reply('update-task-in-project-response', { success: true });
+        }
+      });
+    });
+  });
+
+
+  ipcMain.on('update-project-details', (event, args) => {
+    const { projectId, name, img } = args
+
+    db.findOne({ _id: projectId }, (err, doc) => {
+      if (err) {
+        console.error('Ошибка при поиске проекта:', err)
+        event.reply('update-project-details-response', { success: false, error: err })
+        return
+      }
+
+      if (!doc) {
+        console.error('Проект не найден')
+        event.reply('update-project-details-response', {
+          success: false,
+          error: 'Проект не найден'
+        })
+        return
+      }
+
+      // Обновляем поля name и img
+      doc.name = name
+      doc.img = img
+
+      // Обновляем документ в базе данных
+      db.update({ _id: projectId }, doc, {}, (err, numUpdated) => {
+        if (err) {
+          console.error('Ошибка при обновлении проекта:', err)
+          event.reply('update-project-details-response', { success: false, error: err })
+        } else {
+          console.log('Детали проекта успешно обновлены:', numUpdated)
+          event.reply('update-project-details-response', { success: true })
+        }
+      })
+    })
+  })
+
   ipcMain.on('one-project', (event, args) => {
     db.findOne({ _id: args._id }, (err, data) => {
       if (err) {
