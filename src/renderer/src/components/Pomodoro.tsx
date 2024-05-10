@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { CirclePause, CirclePlay, RotateCcw } from "lucide-react";
 
 function PomodoroTimer() {
@@ -12,28 +12,30 @@ function PomodoroTimer() {
   const [onBreak, setOnBreak] = useState(false)
 
   useEffect(() => {
-    let interval = null
+    let interval: NodeJS.Timeout | null = null;
 
     if (isActive) {
       interval = setInterval(() => {
-        setSecondsLeft((secondsLeft) => secondsLeft - 1)
-      }, 1000)
+        setSecondsLeft(secondsLeft => secondsLeft - 1);
+      }, 1000);
     } else if (!isActive && secondsLeft !== 0) {
-      clearInterval(interval)
+      if (interval) clearInterval(interval);
     }
 
     if (secondsLeft === 0) {
       if (!onBreak) {
-        setSecondsLeft(breakTime * 60)
-        setOnBreak(true)
+        setSecondsLeft(breakTime * 60);
+        setOnBreak(true);
       } else {
-        setSecondsLeft(workTime * 60)
-        setOnBreak(false)
+        setSecondsLeft(workTime * 60);
+        setOnBreak(false);
       }
     }
 
-    return () => clearInterval(interval)
-  }, [isActive, secondsLeft, onBreak])
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, secondsLeft, onBreak, breakTime, workTime]);
 
   // Функции для управления таймером
   const startTimer = () => {

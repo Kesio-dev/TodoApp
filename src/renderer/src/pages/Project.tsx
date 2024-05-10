@@ -1,4 +1,4 @@
-import { useLocation, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import {
@@ -8,13 +8,13 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalFooter,
-  Input
+  ModalFooter
 } from '@nextui-org/react'
+import { IProject } from "../store/store";
 
 function Project() {
   const { id } = useParams()
-  const [project, setProject] = useState({
+  const [project, setProject] = useState<IProject>({
     name: '',
     img: '',
     tasks: [],
@@ -23,14 +23,13 @@ function Project() {
   const [counter, setCounter] = useState(0)
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure()
   const [modalType, setModalType] = useState('new')
-  const [modalPlacement, setModalPlacement] = useState('auto')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [taskId, setTaskId] = useState('')
   const getData = () => {
     window.electron.ipcRenderer.send('one-project', { _id: id })
 
-    window.electron.ipcRenderer.on('one-project-response', (event, res) => {
+    window.electron.ipcRenderer.on('one-project-response', (_event, res) => {
       if (res.success) {
         setProject(res.projects)
       }
@@ -90,7 +89,7 @@ function Project() {
       }
     });
 
-    window.electron.ipcRenderer.on("update-task-in-project-response", (event, res) => {
+    window.electron.ipcRenderer.on("update-task-in-project-response", (_event, res) => {
       if (res.success) {
         console.log("Задание в проекте успешно обновлено");
         // Добавьте здесь код для обновления интерфейса, если это необходимо
@@ -126,7 +125,7 @@ function Project() {
           </div>
         </div>
 
-        {project.tasks.map((i, index) => {
+        {project.tasks.map((i) => {
           if (!i.done) {
             return (
               <div className={"border rounded p-3 mt-2"}>
@@ -170,12 +169,13 @@ function Project() {
               </div>
             )
           }
-        })}
+          return null
+        }).filter(x => x)}
       </div>
 
       <div>
         <div className={"text-xl font-semibold mt-6"}>Competed Tasks:</div>
-        {project.tasks.map((i, index) => {
+        {project.tasks.map((i) => {
           if (i.done) {
             return (
               <div className={"border rounded p-3 mt-2 opacity-40"}>
@@ -218,11 +218,12 @@ function Project() {
               </div>
             )
           }
-        })}
+          return null
+        }).filter(x => x)}
         {project.tasks.filter((x) => x.done).length === 0 && <div>тут пока пусто :(</div>}
       </div>
 
-      <Modal isOpen={isOpen} placement={modalPlacement} onOpenChange={onOpenChange}>
+      <Modal isOpen={isOpen} placement={'auto'} onOpenChange={onOpenChange}>
         <ModalContent>
           {(onClose) => {
             if (modalType === 'new') {
@@ -336,6 +337,8 @@ function Project() {
                 </>
               )
             }
+
+            return <div onClick={onClose}></div>
 
 
           }}

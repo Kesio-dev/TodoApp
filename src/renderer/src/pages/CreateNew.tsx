@@ -1,20 +1,21 @@
-import { useEffect, useState } from 'react'
-import { Button } from '../components/Button'
+import { useState } from 'react'
 import { useAtom } from 'jotai'
-import { projectsAtom } from '../store/store'
+import { IProject, projectsAtom } from "../store/store";
 import { useNavigate } from 'react-router-dom'
+import { Button } from "@nextui-org/react";
 
 export function CreateNew() {
   const navigate = useNavigate()
-  const [projects, setProjects] = useAtom(projectsAtom)
+  const [_projects, setProjects] = useAtom<IProject[]>(projectsAtom)
   const [title, setTitle] = useState('')
 
   const create = () => {
     window.electron.ipcRenderer.send('new-project', { name: title })
     window.electron.ipcRenderer.send('projects')
 
-    window.electron.ipcRenderer.on('projects-response', (event, res) => {
+    window.electron.ipcRenderer.on('projects-response', (_event, res) => {
       if (res.success) {
+        // @ts-ignore
         setProjects(res.projects)
         navigate('/projects/' + res.projects.filter((x) => x.name === title)[0]._id)
       }

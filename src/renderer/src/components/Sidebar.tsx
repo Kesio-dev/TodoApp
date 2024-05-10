@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAtom } from 'jotai'
-import { projectsAtom } from '../store/store'
+import { IProject, projectsAtom } from "../store/store";
 import PomodoroTimer from './Pomodoro'
 import {
   Popover,
@@ -25,14 +25,13 @@ export function Sidebar() {
   const [title, setTitle] = useState('')
   const [icon, setIcon] = useState('')
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure()
-  const [modalPlacement, setModalPlacement] = useState('auto')
-  const navigate = useNavigate()
-  const [projects, setProjects] = useAtom(projectsAtom)
+  const [projects, setProjects] = useAtom<IProject[]>(projectsAtom)
   useEffect(() => {
     window.electron.ipcRenderer.send('projects')
 
-    window.electron.ipcRenderer.on('projects-response', (event, res) => {
+    window.electron.ipcRenderer.on('projects-response', (_event, res) => {
       if (res.success) {
+        // @ts-ignore
         setProjects(res.projects)
       }
     })
@@ -45,7 +44,7 @@ export function Sidebar() {
       img: icon
     })
 
-    window.electron.ipcRenderer.on('update-project-details-response', (event, res) => {
+    window.electron.ipcRenderer.on('update-project-details-response', (_event, res) => {
       if (res.success) {
         console.log('Детали проекта успешно обновлены')
         // Добавьте здесь код для обновления интерфейса, если это необходимо
@@ -61,7 +60,7 @@ export function Sidebar() {
   const deleteProject = () => {
     window.electron.ipcRenderer.send('delete-project', projectId)
 
-    window.electron.ipcRenderer.on('delete-project-response', (event, res) => {
+    window.electron.ipcRenderer.on('delete-project-response', (_event, res) => {
       if (res.success) {
         console.log('Проект успешно удален')
         // Добавьте здесь код для обновления интерфейса, если это необходимо
@@ -74,6 +73,10 @@ export function Sidebar() {
     onClose()
   }
 
+  // @ts-ignore
+  // @ts-ignore
+  // @ts-ignore
+  // @ts-ignore
   return (
     <aside className={"flex flex-col h-screen justify-between bg-white"}>
       <div className="flex flex-col min-w-72 w-72 px-4 py-8 overflow-y-auto border-r">
@@ -84,7 +87,7 @@ export function Sidebar() {
 
         <div className="flex flex-col justify-between flex-1 mt-6">
           <nav>
-            {projects.map((i, index) => {
+            {projects.map((i) => {
               return (
                 <div
                   className={`flex items-center px-4 py-2 text-gray-700 rounded-md ${`/projects/${i._id}` === location.pathname && 'bg-gray-100 font-semibold'}`}
@@ -153,48 +156,51 @@ export function Sidebar() {
             </Link>
           </nav>
         </div>
-
-        <Modal isOpen={isOpen} placement={modalPlacement} onOpenChange={onOpenChange}>
+        <Modal isOpen={isOpen} placement={'auto'} onOpenChange={onOpenChange}>
           <ModalContent>
-            {(onClose) => {
-              if (modalType === 'modalType') {
-                return (
-                  <>
-                    <ModalHeader className="flex flex-col gap-1">Редактирование проекта</ModalHeader>
-                    <ModalBody>
-                      <p>Тут вы можете изменить название и иконку</p>
-                      <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-                    </ModalBody>
-                    <ModalFooter>
-                      <Button color="danger" variant="light" onPress={onClose}>
-                        Закрыть
-                      </Button>
-                      <Button color="primary" onPress={updateProject}>
-                        Обновить
-                      </Button>
-                    </ModalFooter>
-                  </>
-                )
+            {
+              (onClose) => {
+                if (modalType === 'modalType') {
+                  return (
+                    <>
+                      <ModalHeader className="flex flex-col gap-1">Редактирование проекта</ModalHeader>
+                      <ModalBody>
+                        <p>Тут вы можете изменить название и иконку</p>
+                        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                      </ModalBody>
+                      <ModalFooter>
+                        <Button color="danger" variant="light" onPress={onClose}>
+                          Закрыть
+                        </Button>
+                        <Button color="primary" onPress={updateProject}>
+                          Обновить
+                        </Button>
+                      </ModalFooter>
+                    </>
+                  )
+                }
+                if (modalType === 'delete') {
+                  return (
+                    <>
+                      <ModalHeader className="flex flex-col gap-1">Удаление проекта</ModalHeader>
+                      <ModalBody>
+                        <p>Вы уверены, что хотите удалить проект? Это удалит так же все его задания</p>
+                      </ModalBody>
+                      <ModalFooter>
+                        <Button color="danger" variant="light" onPress={onClose}>
+                          Отмена
+                        </Button>
+                        <Button color="primary" onPress={deleteProject}>
+                          Да, согласен
+                        </Button>
+                      </ModalFooter>
+                    </>
+                  )
+                }
+                return <div onClick={onClose}></div>
+
               }
-              if (modalType === 'delete') {
-                return (
-                  <>
-                    <ModalHeader className="flex flex-col gap-1">Удаление проекта</ModalHeader>
-                    <ModalBody>
-                      <p>Вы уверены, что хотите удалить проект? Это удалит так же все его задания</p>
-                    </ModalBody>
-                    <ModalFooter>
-                      <Button color="danger" variant="light" onPress={onClose}>
-                        Отмена
-                      </Button>
-                      <Button color="primary" onPress={deleteProject}>
-                        Да, согласен
-                      </Button>
-                    </ModalFooter>
-                  </>
-                )
-              }
-            }}
+            }
           </ModalContent>
         </Modal>
       </div>

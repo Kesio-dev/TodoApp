@@ -3,7 +3,6 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import Datastore from 'nedb'
-import { randomUUID } from 'node:crypto'
 
 let db = new Datastore({ filename: './db.db', autoload: true })
 
@@ -175,7 +174,7 @@ app.whenReady().then(() => {
     })
   })
 
-  ipcMain.on('new-project', (event, arg) => {
+  ipcMain.on('new-project', (_event, arg) => {
     const { name } = arg
     db.insert({
       name,
@@ -303,7 +302,7 @@ app.whenReady().then(() => {
       }
 
       // Сохраняем обновлённый документ обратно в базу данных
-      db.update({ _id: args.projectId }, doc, {}, (err, numUpdated) => {
+      db.update({ _id: args.projectId }, doc, {}, (err) => {
         if (err) {
           console.error('Error updating project:', err)
           event.reply('task:complete:error', err)
@@ -341,7 +340,7 @@ app.whenReady().then(() => {
       }
 
       // Сохраняем обновлённый документ обратно в базу данных
-      db.update({ _id: args.projectId }, doc, {}, (err, numUpdated) => {
+      db.update({ _id: args.projectId }, doc, {}, (err) => {
         if (err) {
           console.error('Error updating project:', err)
           event.reply('task:complete:error', err)
@@ -362,8 +361,8 @@ app.whenReady().then(() => {
   //   });
   // });
 
-  ipcMain.on('get', (event, arg) => {
-    db.find({ year: 1946 }, function (err, docs) {
+  ipcMain.on('get', () => {
+    db.find({ year: 1946 }, function (_err, docs) {
       console.log(docs)
     })
   })
